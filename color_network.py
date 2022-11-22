@@ -210,6 +210,6 @@ for epoch in range(num_epochs):
     if epoch % 10 == 0:
         pic = to_img(output.cpu().data)
         save_image(pic, './dc_img/image_{}.png'.format(epoch))
-        torch.save(model.state_dict(), f'./models/color_netowrk_end{epoch}.pth')
+        torch.save(model.state_dict(), f'./models/color_netowrk_diverse_end{epoch}.pth')
 
-torch.save(model.state_dict(), './models/color_netowrk_end.pth')
+torch.save(model.state_dict(), './models/color_network_diverse_end.pth')
