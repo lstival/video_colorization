@@ -1,10 +1,2 @@
-dc_img/
-dc_img_2/
-dc_img_3/
-dc_img_4/
-dc_img_MSE/
-dc_img_predio/
-dc_img_sq/
-mlp_img/
-data/
-models/
+../results
+../__pycache__
