@@ -1,2 +1,7 @@
-../results
-../__pycache__
+#Folder
+results/
+__pycache__/
+data/
+
+#Files
+*.ipynb

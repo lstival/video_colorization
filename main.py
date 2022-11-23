@@ -1,9 +1,10 @@
-from ViT import *
+# ================ Read Data ===================
+#recives a video and a example color image
 
-from PIL import Image
-import requests
-url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
-image = Image.open(requests.get(url, stream=True).raw)
 
-a = ViT()
-print(a.forwad(image).shape)
+# ================ Predict =====================
+# predict the color for each frame in the video
+
+
+# ============== Reconscruct ===================
+# reconscruct the video from frames colorizeds
