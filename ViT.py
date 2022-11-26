@@ -24,24 +24,38 @@
 
 # https://github.com/lucidrains/vit-pytorch#vision-transformer---pytorch
 import torch
+from torch import nn
 from vit_pytorch import ViT
+from vit_pytorch import SimpleViT
 
-class Vit_neck():
-    def __init__(self, batch_size, image_size, out_chanels):
-        self.v = ViT(
+class Vit_neck(nn.Module):
+    def __init__(self, batch_size, image_size, out_chanels, device="cuda"):
+        super(Vit_neck, self).__init__()
+        # self.v = ViT(
+        #     image_size = image_size,
+        #     patch_size = batch_size,
+        #     num_classes = out_chanels,
+        #     dim = 256,
+        #     depth = 4,
+        #     heads = 32,
+        #     mlp_dim = 1024,
+        #     dropout = 0.1,
+        #     emb_dropout = 0.1
+        # )
+
+        self.v = SimpleViT(
             image_size = image_size,
             patch_size = batch_size,
             num_classes = out_chanels,
-            dim = 256,
-            depth = 4,
-            heads = 32,
-            mlp_dim = 1024,
-            dropout = 0.1,
-            emb_dropout = 0.1
+            dim = 1024,
+            depth = 6,
+            heads = 16,
+            mlp_dim = 2048
         )
+        self.device = device
 
     def forward(self, x) -> torch.Tensor:
-        self.v.to("cuda")
+        self.v.to(self.device)
         preds = self.v(x)
         return preds
 

@@ -31,7 +31,7 @@ import load_data as ld
 dataLoader = ld.ReadData()
 
 # Root directory for dataset
-dataroot = "C:/video_colorization/data/train/sunset"
+dataroot = "C:/video_colorization/data/train/woman"
 
 # Spatial size of training images. All images will be resized to this
 image_size = (256, 256)

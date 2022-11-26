@@ -2,6 +2,11 @@
 results/
 __pycache__/
 data/
+notebooks/
+temp/
+data/
+models/
 
 #Files
 *.ipynb
+conv_autoencoder.pth

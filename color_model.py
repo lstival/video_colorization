@@ -44,7 +44,7 @@ class ColorNetwork(nn.Module):
         conv_dim = 256 / 16
 
         #Visual Transformer definiton (Batchsize, Image input size, size of tensor to be reshaped to "encaixar" in the last encoder layer)
-        self.vit = Vit_neck(64, 256, int(128*conv_dim*conv_dim))
+        self.vit = Vit_neck(64, 256, int(256*conv_dim*conv_dim))
 
         #Encoder Network
         self.dw_conv1 = ConvDown2d(1, self.out_channel, self.kernel_size,self.stride,self.padding)
@@ -89,11 +89,15 @@ class ColorNetwork(nn.Module):
         e4 = self.dw_conv4(e3)
         e4 = nn.Tanh()(e4)
         e4 = self.max_pol4(e4)
+        # print(f"e4_v1 max: {e4.max()}")
+        # print(f"e4 shape: {e4.shape}")
 
         #BottlerNeck
         neck =  self.vit.forward(color_sample)
+        # print(f"neck shape: {neck.shape}")
         neck = torch.reshape(neck, (e4.shape[0], e4.shape[1], e4.shape[2], e4.shape[3]))
         e4 = torch.cat((neck, e4), 1)
+        # print(f"e4_v1 max: {e4.max()}")
 
         #Decoder
         d4 = self.up_conv4(e4)
