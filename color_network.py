@@ -46,20 +46,21 @@ dataLoader = ld.ReadData()
 
 # Root directory for dataset
 # dataroot = "../data/train/woman"
+# train_10k_animations
 
-dataroot = "C:/video_colorization/data/train/diverses"
+dataroot = "C:/video_colorization/data/train/sunset"
 
 # Spatial size of training images. All images will be resized to this
 image_size = (256, 256)
 
 # Batch size during training
-batch_size = 16
-num_epochs = 101
+batch_size = 32
+num_epochs = 201
 
 dataloader = dataLoader.create_dataLoader(dataroot, image_size, batch_size)
 
 # from color_model_vgg import ColorNetwork
-from color_model import ColorNetwork
+from color_model_vgg import ColorNetwork
 
 # Factor of the output of Vit
 conv_dim = image_size[0] / 16
@@ -68,7 +69,7 @@ conv_dim = image_size[0] / 16
 # vit = Vit_neck(batch_size, image_size[0], int(256*7*7))
 
 ## Model setings
-model = ColorNetwork(in_channel=1, out_channel=64, stride=2, padding=2).cuda()
+model = ColorNetwork(in_channel=1, out_channel=64, stride=2, padding=2, img_size=image_size[0]).cuda()
 
 # ================ Losses ========================
 
@@ -115,7 +116,7 @@ for epoch in range(num_epochs):
     for data in dataloader:
         img, _ = data
         img.cuda()
-        img_gray = transforms.Grayscale(num_output_channels=1)(img).cuda()
+        img_gray = transforms.Grayscale(num_output_channels=3)(img).cuda()
 
         # img_gray = ed.get_edges(img, 30, 150)
         # print(f"img_gray shape1: {len(img_gray)}")
@@ -149,9 +150,9 @@ for epoch in range(num_epochs):
         pic = to_img(output.cpu().data)
         # plt.imshow(pic[0].transpose(0,2))
         save_image(pic, './dc_img/image_{}.png'.format(epoch))
-        torch.save(model.state_dict(), f'./models/color_network_test_{epoch}.pth')
+        torch.save(model.state_dict(), f'./models/color_network_vgg_{epoch}.pth')
 
-torch.save(model.state_dict(), './models/color_network_test_end.pth')
+torch.save(model.state_dict(), './models/color_network_vgg_end.pth')
 
 # df_losses = pd.DataFrame.from_dict(dic_losses)
 # df_losses.to_csv("losses_model.csv")

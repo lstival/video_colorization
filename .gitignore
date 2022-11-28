@@ -8,5 +8,4 @@ data/
 models/
 
 #Files
-*.ipynb
 conv_autoencoder.pth

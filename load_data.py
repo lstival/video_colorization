@@ -62,7 +62,9 @@ class ReadData():
                                         # transforms.Lambda(lambda x: color_trans.rgb2lab(x)),
                                         # transforms.Grayscale(num_output_channels=1),
                                         transforms.ToTensor(),
-                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                        # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                        # Alexnet
+                                        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                                 ]))
         # Create the dataloader
         self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,

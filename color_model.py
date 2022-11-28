@@ -31,7 +31,7 @@ class ColorNetwork(nn.Module):
     Return a Nx3xHxW image with colors.
     """
 
-    def __init__(self, in_channel, out_channel, stride, padding) -> None:
+    def __init__(self, in_channel, out_channel, stride, padding, img_size) -> None:
         super(ColorNetwork, self).__init__()
         self.in_channel = in_channel
         self.out_channel = out_channel
@@ -40,11 +40,12 @@ class ColorNetwork(nn.Module):
         self.padding = padding
         # self.vit = vit
 
+        self.img_size = img_size
         # Factor of the output of Vit
-        conv_dim = 256 / 16
+        conv_dim = img_size / 16
 
         #Visual Transformer definiton (Batchsize, Image input size, size of tensor to be reshaped to "encaixar" in the last encoder layer)
-        self.vit = Vit_neck(64, 256, int(256*conv_dim*conv_dim))
+        self.vit = Vit_neck(64, self.img_size, int(256*conv_dim*conv_dim))
 
         #Encoder Network
         self.dw_conv1 = ConvDown2d(1, self.out_channel, self.kernel_size,self.stride,self.padding)
