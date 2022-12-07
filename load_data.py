@@ -43,7 +43,7 @@ class ReadData():
     def __init__(self) -> None:
         super().__init__()
 
-    def create_dataLoader(self, dataroot, image_size, batch_size):
+    def create_dataLoader(self, dataroot, image_size, batch_size, shuffle=True):
         """
         Read all imagens from the folder and convert them in lab space,
         as result a Data Loader as created and returned:
@@ -68,7 +68,7 @@ class ReadData():
                                 ]))
         # Create the dataloader
         self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                            shuffle=True)
+                                            shuffle=shuffle)
         return self.dataloader
 
     def img_example(self, dataloader):

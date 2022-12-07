@@ -48,9 +48,9 @@ class Vit_neck(nn.Module):
             patch_size = batch_size,
             num_classes = out_chanels,
             dim = 1024,
-            depth = 6,
+            depth = 8,
             heads = 16,
-            mlp_dim = 2048
+            mlp_dim = 1024
         )
         self.device = device
 

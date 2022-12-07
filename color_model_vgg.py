@@ -35,7 +35,7 @@ class ColorNetwork(nn.Module):
 
         # Factor of the output of Vit
         # self.vit = Vit_neck(32, 256, int(256*7*7))
-        self.vit = Vit_neck(32, self.img_size, int(256*7*7))
+        self.vit = Vit_neck(32, self.img_size, int(512*7*7))
         
         #Encoder Network
 
