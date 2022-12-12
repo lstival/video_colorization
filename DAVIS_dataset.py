@@ -69,7 +69,7 @@ class DAVISDataset(Dataset):
         Return the frames that will be colorized, the next frames and 
         the color example frame (first of the sequence).
         """
-        return self.color_examples[index], self.color_examples[index+1], self.samples[index]
+        return self.samples[index], self.color_examples[index]
 
 
 # Create the dataset

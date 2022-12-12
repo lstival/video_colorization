@@ -1,3 +1,7 @@
+"""
+Evaluation of the model, and save the video colorized
+from the example image passed
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -11,11 +15,13 @@ from torchvision.utils import save_image
 
 import load_data as ld
 
+from utils import *
+
 image_size = (128, 128)
 
 device = "cuda"
 
-str_dt = "20221205_202003"
+str_dt = "20221209_074459"
 
 # ================ Read Data ===================
 #recives a video and a example color image
@@ -25,6 +31,7 @@ str_dt = "20221205_202003"
 
 temp_path = "temp/images"
 video_name = "C:/video_colorization/data/videos/gray/sunset_gray.mp4"
+# video_name = "C:/video_colorization/data/videos/woman_gray.mp4"
 
 if not os.path.exists(temp_path):
     os.makedirs(temp_path)
@@ -98,3 +105,4 @@ print("Evaluation Finish")
 # plt.imshow(to_img(outs[0])[0].transpose(0,2).cpu().detach().numpy())
 # ============== Reconscruct ===================
 # reconscruct the video from frames colorizeds
+frame_2_video(colored_frames_save, "sunset3.avi")

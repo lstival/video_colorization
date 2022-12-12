@@ -26,7 +26,7 @@ class ColorNetwork(nn.Module):
     Other group ConvUp2d to resize the image to the original size.
     The botlerneck is a Vit (Vision Transform) responsable to create a feature
     space of the sample image (with the wished colors)
-    All activations are presented by Hardtanh() function.
+    All activations are presented by Tanh() function.
 
     Return a Nx3xHxW image with colors.
     """
@@ -62,10 +62,13 @@ class ColorNetwork(nn.Module):
 
         #Upscaling
         self.up_conv4 = ConvUp2d(self.out_channel*8, self.out_channel*4, 2, self.stride, 0)
+        # self.bat4 = nn.BatchNorm2d(self.out_channel*4)
 
         self.up_conv3 = ConvUp2d(self.out_channel*8, self.out_channel*2, 2, self.stride, 0)
+        # self.bat3 = nn.BatchNorm2d(self.out_channel*2)
 
         self.up_conv2 = ConvUp2d(self.out_channel*4, self.out_channel, 2, self.stride,0)
+        # self.bat2 = nn.BatchNorm2d(self.out_channel)
 
         self.up_conv1 = ConvUp2d(self.out_channel*2, 3, 2, 2, 0)
 
@@ -76,19 +79,19 @@ class ColorNetwork(nn.Module):
 
         #Encoder
         e1 = self.dw_conv1(x)
-        e1 = nn.Hardtanh()(e1)
+        e1 = nn.Tanh()(e1)
         e1 = self.max_pol1(e1)
         
         e2 = self.dw_conv2(e1)
-        e2 = nn.Hardtanh()(e2)
+        e2 = nn.Tanh()(e2)
         e2 = self.max_pol2(e2)
 
         e3 = self.dw_conv3(e2)
-        e3 = nn.Hardtanh()(e3)
+        e3 = nn.Tanh()(e3)
         e3 = self.max_pol3(e3)
 
         e4 = self.dw_conv4(e3)
-        e4 = nn.Hardtanh()(e4)
+        e4 = nn.Tanh()(e4)
         e4 = self.max_pol4(e4)
         # print(f"e4_v1 max: {e4.max()}")
         # print(f"e4 shape: {e4.shape}")
@@ -103,19 +106,22 @@ class ColorNetwork(nn.Module):
 
         #Decoder
         d4 = self.up_conv4(e4)
-        d4 = nn.Hardtanh()(d4)
+        d4 = nn.Tanh()(d4)
+        # d4 = self.bat4(d4)
         
         d3 = torch.cat((e3, d4), 1)
         d3 = self.up_conv3(d3)
-        d3 = nn.Hardtanh()(d3)
+        d3 = nn.Tanh()(d3)
+        # d3 = self.bat4(d3)
 
         d2 = torch.cat((e2, d3), 1)
         d2 = self.up_conv2(d2)
-        d2 = nn.Hardtanh()(d2)
+        d2 = nn.Tanh()(d2)
+        # d2 = self.bat4(d2)
 
         d1 = torch.cat((e1, d2), 1)
         d1 = self.up_conv1(d1)
-        d1 = nn.Hardtanh()(d1)
+        # d1 = nn.Tanh()(d1)
 
         #Activation
         out = self.activation(d1)

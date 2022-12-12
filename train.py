@@ -4,6 +4,9 @@ __author__ = 'lstival'
 # https://github.com/L1aoXingyu/pytorch-beginner/tree/master/08-AutoEncoder
 # https://huggingface.co/models?sort=downloads
 
+
+# https://www.comet.com/docs/v2/integrations/ml-frameworks/pytorch/
+
 import os
 import torch
 import torchvision
@@ -21,9 +24,13 @@ dt = datetime.now()
 dt_str = str(dt).replace(':','.')
 dt_str = datetime.now().strftime('%Y%m%d_%H%M%S')
 
+# Import comet to log the model training
+import comet_ml
+comet_ml.init(project_name="natural_video_colorization")
+
 #  dataloader class
-# import DAVIS_dataset as ld
-import load_data as ld
+import DAVIS_dataset as ld
+# import load_data as ld
 
 # vision transform
 from ViT import *
@@ -35,7 +42,7 @@ torch.manual_seed(2021)
 
 def save_losses(dic_losses, filename="losses_network_v1"):
     os.makedirs("losses", exist_ok=True)
-    fout = f"losses/{filename}_{str(dt_str)}.csv"
+    fout = f"{filename}.csv"
     fo = open(fout, "w")
 
     for k, v in dic_losses.items():
@@ -51,6 +58,10 @@ os.makedirs(f'./dc_img/{str(dt_str)}', exist_ok=True)
 # Models Save
 os.makedirs(f'./models/{str(dt_str)}', exist_ok=True)
 
+#Path to loss
+path_loss = f"losses/{dt_str}"
+os.makedirs(path_loss, exist_ok=True)
+
 # torch tensor to image
 def to_img(x):
     x = 0.5 * (x + 1)
@@ -61,6 +72,7 @@ def to_img(x):
 # ================ Read Data =====================
 dataLoader = ld.ReadData()
 
+used_dataset = "DAVIS"
 # Root directory for datase
 
 # dataroot = "C:/video_colorization/data/train_10k_animations"
@@ -69,26 +81,55 @@ dataLoader = ld.ReadData()
 # dataroot = "C:/video_colorization/data/train/sunset"
 # dataroot_val = "C:/video_colorization/data/train/sunset_val"
 # dataroot = "C:/video_colorization/data/train/diverses"
-dataroot = "C:/video_colorization/data/DAVIS"
-dataroot_val = "C:/video_colorization/data/DAVIS_val"
 
-# Spatial size of training images. All images will be resized to this
-image_size = (256, 256)
+# dataroot = "C:/video_colorization/data/DAVIS"
+# dataroot_val = "C:/video_colorization/data/DAVIS_val"
+
+dataroot = f"C:/video_colorization/data/train/{used_dataset}"
+dataroot_val = f"C:/video_colorization/data/train/{used_dataset}_val"
 
 # https://neptune.ai/blog/pytorch-loss-functions
 
-# Batch size during training
-batch_size = 32
-num_epochs = 101
 
-dataloader = dataLoader.create_dataLoader(dataroot, image_size, batch_size, True)
-dataloader_val = dataLoader.create_dataLoader(dataroot_val, image_size, batch_size, False)
+# ================ Train Parans ========================
+# Spatial size of training images. All images will be resized to this
+image_size = (128, 128)
+
+# Batch size during training
+batch_size = 100
+num_epochs = 101
+model_deep = 128
+
+learning_rate = 3e-2
+
+# hyper_params = {"batch_size": batch_size, 
+#         "num_epochs": num_epochs, 
+#         "learning_rate": learning_rate}
+
+experiment = comet_ml.Experiment(
+    api_key="SNv4ks5JjUxZ1X0FhARDGt4SY",
+    project_name="natural_video_colorization",
+    workspace="lstival")
+
+dataloader = dataLoader.create_dataLoader(dataroot, 
+                        image_size, batch_size, True)
+
+dataloader_val = dataLoader.create_dataLoader(dataroot_val,
+                        image_size, batch_size, False)
 
 # from color_model_vgg import ColorNetwork
-from color_model import ColorNetwork
+# from color_model import ColorNetwork
+from simple_color_model import ColorNetwork
 
 ## Model setings
-model = ColorNetwork(in_channel=1, out_channel=128, stride=2, padding=2, img_size=image_size[0]).to(device)
+model = ColorNetwork(1,3,image_size[0]).to(device)
+# model = ColorNetwork(in_channel=1, out_channel=model_deep, 
+#                     stride=2, padding=2, img_size=image_size[0]).to(device)
+
+# selection of the optimizer
+optimizer = torch.optim.Adam(model.parameters(), 
+            lr=learning_rate, weight_decay=1e-5)
+# optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
 # ================ Losses ========================
 
@@ -98,42 +139,67 @@ from torchmetrics.image.fid import FrechetInceptionDistance
 from piq import ssim, SSIMLoss
 from torch.nn import KLDivLoss
 from vgg_loss import VGGLoss
+from smooth_loss import Loss
 
 LPIPS = LearnedPerceptualImagePatchSimilarity(net_type='vgg')
 PSNR = PeakSignalNoiseRatio()
 MSE = nn.MSELoss()
 MAE = nn.L1Loss()
 SSIM = SSIMLoss(data_range=1.)
+PERCEPTUAL = VGGLoss(model='vgg19')
+FID = FrechetInceptionDistance(feature=64)
 
 # Falta Vram
-# PERCEPTUAL = VGGLoss(model='vgg19')
-# FID = FrechetInceptionDistance(feature=64)
-
-# ================ Train ======================== 
 
 # learning rate of the netowrk
-learning_rate = 1e-2
-
 dic_losses = {}
 
 # define the loss
-criterion = MSE # Apply in the output
-criterion_2 = SSIM # Apply in image from output
+criterion = MSE# Apply in the output
+criterion_2 = LPIPS # Apply in image from output
+criterion_3 = SSIM# Apply in the output (original image and first frame of scene)
 
+criterion_3.to(device)
 criterion_2.to(device)
 criterion.to(device)
 
-# selection of the optimizer
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-# optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+# ================ Logs ========================
+params = {
+    "batch_size": batch_size,
+    "epochs": num_epochs,
+    "img_size": image_size,
+    "output_layers": model_deep,
+    "layer1_activation": 'relu',
+    "learning_rate": learning_rate,
+    "weight_decay": 1e-5,
+    "dataset": used_dataset,
+    "optimizer": str(type(optimizer)).split('.')[-1].split("'")[0],
+    "criterion": str(type(criterion)).split('.')[-1].split("'")[0],
+    "criterion_2": str(type(criterion_2)).split('.')[-1].split("'")[0],
+    "criterion_3": str(type(criterion_3)).split('.')[-1].split("'")[0],
+    "vit": "ViT",
+    "network": "simple_color_model",
+    "comment": "3 losses",
+}
+
+experiment.log_parameters(params)
+
+# ================ Train ======================== 
 
 def create_samples(data):
+    """
+    img: Image with RGB colors
+    img_gray: Grayscale version of the img (this) variable will be used to be colorized
+    img_color: the image with color that bt used as example (first at the scene)
+    """
     img, img_color = data
-    img.to(device)
+    # img.to(device)
+    # img_color.to(device)
     img_gray = transforms.Grayscale(num_output_channels=1)(img).to(device)
 
     img_gray = Variable(img_gray).to(device)
     img = Variable(img).to(device)
+    img_color = Variable(img_color).to(device)
 
     return img, img_gray, img_color
 
@@ -142,52 +208,64 @@ best_vloss = 1000000
 # loop to train
 for epoch in range(num_epochs):
     total_loss = 0
-    for data in dataloader:
-        """
-        img: Image with RGB colors
-        img_gray: Grayscale version of the img (this) variable will be used to be colorized
-        img_color: the image with color that bt used as example
-        """
+    for idx, data in enumerate(dataloader):
+
         img, img_gray, img_color = create_samples(data)
 
         model.train()
         # ===================forward=====================
-        output = model(img_gray, img.to(device))
+        output = model(img_gray, img_color)
 
-        loss1 = criterion_2(to_img(output), to_img(img.to(device)))
-        loss2 = criterion(output.to(device), img.to(device))
+        loss1 = criterion(output, img) # Loss image and your version RGB
+        loss2 = criterion_2(to_img(output), to_img(img)) # Loss image and tourversion in IMAGE space
+        loss3 = criterion_3(to_img(output), to_img(img)) #Loss image and first frame of the scene
 
-        loss = loss2 + loss1
+        # Save the loss for each criterion at each step
+        experiment.log_metric("loss_1_train", loss1, step=epoch)
+        experiment.log_metric("loss_2_train", loss2, step=epoch)
+        experiment.log_metric("loss_3_train", loss3, step=epoch)
 
-        # ===================backward====================
+        loss = loss2 + loss1 + loss3
+
+        # ================== Backward ===================
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         total_loss += loss.data
 
-    # ===================log========================
-    dic_losses[epoch]=total_loss
+        avg_vloss_train = total_loss / (idx + 1)
 
-    if total_loss < best_vloss:
-        best_vloss = total_loss
+        experiment.log_metric("avg_loss_train", avg_vloss_train, step=epoch)
+        experiment.log_metric("total_loss_train", total_loss, step=epoch)
+
+    # ================== Log =======================
+    dic_losses[epoch]=avg_vloss_train
+
+    if avg_vloss_train < best_vloss:
+        best_vloss = avg_vloss_train
         model_path = './models/{}/color_network_{}.pth'.format(str(dt_str), epoch)
         torch.save(model.state_dict(), model_path)
+        #Save the losses of the model
+        save_losses(dic_losses, f"{path_loss}/losses_network_epoch_{epoch}")
 
-    if epoch % 10 == 0:
-        # ===================validation====================
-        with torch.no_grad():
-            model.eval()
-            running_vloss = 0.0
-            for i, vdata in enumerate(dataloader_val):
-                img, img_gray, img_color = create_samples(vdata)
-                voutputs = model(img_gray, img.to(device))
-                vloss1 = criterion_2(to_img(voutputs), to_img(img))
-                vloss2 = criterion(voutputs.to(device), img.to(device))
-                vloss = vloss1+vloss2
-                running_vloss += vloss
+
+    with torch.no_grad():
+        model.eval()
+        running_vloss = 0.0
+        for i, vdata in enumerate(dataloader_val):
+            img, img_gray, img_color = create_samples(vdata)
+            voutputs = model(img_gray, img)
+            vloss1 = criterion_2(to_img(voutputs), to_img(img))
+            vloss2 = criterion(voutputs, img)
+            vloss = vloss1+vloss2
+            running_vloss += vloss
 
             avg_vloss = running_vloss / (i + 1)
-            print('Epoch [{}/{}] LOSS train {:.4f} valid {:.4f}'.format(epoch+1, num_epochs, total_loss, avg_vloss))
+            experiment.log_metric("avg_loss_val", avg_vloss, step=epoch)
+
+    if epoch % 10 == 0:
+        # ================== Validation ===================
+            print('Epoch [{}/{}] AVG LOSS train {:.4f} || AVG valid {:.4f}'.format(epoch+1, num_epochs, avg_vloss_train, avg_vloss))
 
             pic = to_img(output.cpu().data)
             # plt.imshow(pic[0].transpose(0,2))
@@ -198,6 +276,9 @@ for epoch in range(num_epochs):
 torch.save(model.state_dict(), f'./models/{str(dt_str)}/color_network.pth')
 
 #Save the losses of the model
-save_losses(dic_losses, f"losses_network_{dt_str}")
+save_losses(dic_losses, f"{path_loss}/losses_network_end")
 
 print("Training Finish")
+experiment.end()
+
+# https://github.com/qubvel/segmentation_models.pytorch#models
