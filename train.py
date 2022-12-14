@@ -96,11 +96,11 @@ dataroot_val = f"C:/video_colorization/data/train/{used_dataset}_val"
 image_size = (128, 128)
 
 # Batch size during training
-batch_size = 100
-num_epochs = 101
+batch_size = 90
+num_epochs = 201
 model_deep = 128
 
-learning_rate = 3e-2
+learning_rate = 1e-2
 
 # hyper_params = {"batch_size": batch_size, 
 #         "num_epochs": num_epochs, 
@@ -159,9 +159,9 @@ criterion = MSE# Apply in the output
 criterion_2 = LPIPS # Apply in image from output
 criterion_3 = SSIM# Apply in the output (original image and first frame of scene)
 
-criterion_3.to(device)
-criterion_2.to(device)
 criterion.to(device)
+criterion_2.to(device)
+criterion_3.to(device)
 
 # ================ Logs ========================
 params = {
@@ -179,7 +179,7 @@ params = {
     "criterion_3": str(type(criterion_3)).split('.')[-1].split("'")[0],
     "vit": "ViT",
     "network": "simple_color_model",
-    "comment": "3 losses",
+    "comment": "(full MSE)",
 }
 
 experiment.log_parameters(params)
@@ -195,11 +195,11 @@ def create_samples(data):
     img, img_color = data
     # img.to(device)
     # img_color.to(device)
-    img_gray = transforms.Grayscale(num_output_channels=1)(img).to(device)
+    img_gray = transforms.Grayscale(num_output_channels=1)(img)
 
-    img_gray = Variable(img_gray).to(device)
-    img = Variable(img).to(device)
-    img_color = Variable(img_color).to(device)
+    img.to(device)
+    img_gray.to(device)
+    img_color.to(device)
 
     return img, img_gray, img_color
 
@@ -214,7 +214,7 @@ for epoch in range(num_epochs):
 
         model.train()
         # ===================forward=====================
-        output = model(img_gray, img_color)
+        output = model(img_gray, img)
 
         loss1 = criterion(output, img) # Loss image and your version RGB
         loss2 = criterion_2(to_img(output), to_img(img)) # Loss image and tourversion in IMAGE space

@@ -5,7 +5,8 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 
-path = "C:/video_colorization/data/DAVIS"
+path = "C:/video_colorization/data/train/DAVIS"
+path_gray = "C:/video_colorization/Vit-autoencoder/temp"
 
 class DAVISDataset(Dataset):
     """
@@ -35,12 +36,13 @@ class DAVISDataset(Dataset):
         for scene in self.scenes:
             scene_path = f"{path}/{scene}/"
             for scene_frame in range(len(os.listdir(scene_path))-1):
-                color_examples.append(self.__transform__(Image.open(f"{scene_path}/{str(0).zfill(5)}.jpg")))
-                samples.append(self.__transform__(Image.open(f"{scene_path}/{str(scene_frame+1).zfill(5)}.jpg")))
+                color_examples.append(self.__transform__(Image.open(f"{scene_path}/{str(0).zfill(5)}.jpg"))) #Img 0
+                samples.append(self.__transform__(Image.open(f"{scene_path}/{str(scene_frame+1).zfill(5)}.jpg"))) # Other Imgs
 
 
         # color_examples = samples.copy()
 
+        # assert torch.eq(samples[0], samples[10]), "Samples must be differents"
         assert len(samples) == len(color_examples)
 
         return samples, color_examples
@@ -69,7 +71,7 @@ class DAVISDataset(Dataset):
         Return the frames that will be colorized, the next frames and 
         the color example frame (first of the sequence).
         """
-        return self.samples[index], self.color_examples[index]
+        return self.color_examples[index], self.samples[index]
 
 
 # Create the dataset
@@ -81,13 +83,18 @@ class ReadData():
 
     def create_dataLoader(self, dataroot, image_size, batch_size=16, shuffle=False):
         self.datas = DAVISDataset(dataroot, image_size)
-        self.dataloader = torch.utils.data.DataLoader(self.datas, batch_size=batch_size,shuffle=shuffle)
+        self.dataloader = torch.utils.data.DataLoader(self.datas, batch_size=batch_size, shuffle=shuffle)
 
         assert (next(iter(self.dataloader))[0].shape) == (next(iter(self.dataloader))[1].shape), "The shapes must be the same"
         return self.dataloader
 
 # Loop for each scene to get the 
-# datas = DAVISDataset(path)
+
+# cls = ReadData()
+# temp_path = "temp/images"
+# dataloader = cls.create_dataLoader(temp_path.split('/')[0], (128, 128), 1)
+
+# datas = DAVISDataset(path_gray, (256, 256))
 
 # dataloader = torch.utils.data.DataLoader(datas, batch_size=16,shuffle=False)
 # print(next(iter(dataloader))[0].shape)
