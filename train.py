@@ -15,6 +15,7 @@ from torch.autograd import Variable
 from torchvision import transforms
 from torchvision.utils import save_image
 import matplotlib.pyplot as plt
+import kornia as K
 
 #to create the timestamp
 from datetime import datetime
@@ -64,9 +65,12 @@ os.makedirs(path_loss, exist_ok=True)
 
 # torch tensor to image
 def to_img(x):
+    # x = K.color.lab_to_rgb(x)
     x = 0.5 * (x + 1)
     x = x.clamp(0, 1)
     x = x.view(x.size(0), 3, image_size[0], image_size[1])
+
+    # x = K.tensor_to_image(x)
     return x  
 
 # ================ Read Data =====================
@@ -96,12 +100,14 @@ dataroot_val = f"C:/video_colorization/data/train/{used_dataset}_val"
 image_size = (128, 128)
 
 # Batch size during training
-batch_size = 90
-num_epochs = 201
+batch_size = 80
+num_epochs = 51
 model_deep = 128
 
-learning_rate = 1e-2
+learning_rate = 3e-2
 
+# Number min number of channels in the model
+ch_deep=64
 # hyper_params = {"batch_size": batch_size, 
 #         "num_epochs": num_epochs, 
 #         "learning_rate": learning_rate}
@@ -119,10 +125,10 @@ dataloader_val = dataLoader.create_dataLoader(dataroot_val,
 
 # from color_model_vgg import ColorNetwork
 # from color_model import ColorNetwork
-from simple_color_model import ColorNetwork
+from color_model_simple import ColorNetwork
 
 ## Model setings
-model = ColorNetwork(1,3,image_size[0]).to(device)
+model = ColorNetwork(1,3,image_size[0],ch_deep=ch_deep).to(device)
 # model = ColorNetwork(in_channel=1, out_channel=model_deep, 
 #                     stride=2, padding=2, img_size=image_size[0]).to(device)
 
@@ -137,9 +143,12 @@ from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from torchmetrics import PeakSignalNoiseRatio
 from torchmetrics.image.fid import FrechetInceptionDistance
 from piq import ssim, SSIMLoss
+from piq import VIFLoss
+from piq import VSILoss
 from torch.nn import KLDivLoss
 from vgg_loss import VGGLoss
 from smooth_loss import Loss
+
 
 LPIPS = LearnedPerceptualImagePatchSimilarity(net_type='vgg')
 PSNR = PeakSignalNoiseRatio()
@@ -148,6 +157,7 @@ MAE = nn.L1Loss()
 SSIM = SSIMLoss(data_range=1.)
 PERCEPTUAL = VGGLoss(model='vgg19')
 FID = FrechetInceptionDistance(feature=64)
+VIF = VIFLoss()
 
 # Falta Vram
 
@@ -155,9 +165,9 @@ FID = FrechetInceptionDistance(feature=64)
 dic_losses = {}
 
 # define the loss
-criterion = MSE# Apply in the output
-criterion_2 = LPIPS # Apply in image from output
-criterion_3 = SSIM# Apply in the output (original image and first frame of scene)
+criterion = MSE # Apply in the output
+criterion_2 = SSIM # Apply in image from output
+criterion_3 = LPIPS # Apply in the output (original image and first frame of scene)
 
 criterion.to(device)
 criterion_2.to(device)
@@ -179,7 +189,8 @@ params = {
     "criterion_3": str(type(criterion_3)).split('.')[-1].split("'")[0],
     "vit": "ViT",
     "network": "simple_color_model",
-    "comment": "(full MSE)",
+    "ch_deep": ch_deep,
+    "comment": "",
 }
 
 experiment.log_parameters(params)
@@ -192,16 +203,19 @@ def create_samples(data):
     img_gray: Grayscale version of the img (this) variable will be used to be colorized
     img_color: the image with color that bt used as example (first at the scene)
     """
-    img, img_color = data
+    img, img_color, next_frame = data
     # img.to(device)
     # img_color.to(device)
+
     img_gray = transforms.Grayscale(num_output_channels=1)(img)
+    # img_gray = img[:,:1,:,:]
 
-    img.to(device)
-    img_gray.to(device)
-    img_color.to(device)
+    img = img.to(device)
+    img_gray = img_gray.to(device)
+    img_color = img_color.to(device)
+    next_frame = next_frame.to(device)
 
-    return img, img_gray, img_color
+    return img, img_gray, img_color, next_frame
 
 best_vloss = 1000000
 
@@ -210,15 +224,15 @@ for epoch in range(num_epochs):
     total_loss = 0
     for idx, data in enumerate(dataloader):
 
-        img, img_gray, img_color = create_samples(data)
+        img, img_gray, img_color, next_frame = create_samples(data)
 
         model.train()
-        # ===================forward=====================
-        output = model(img_gray, img)
+        # ================== Forward ====================
+        output = model(img_gray, img_color)
 
         loss1 = criterion(output, img) # Loss image and your version RGB
         loss2 = criterion_2(to_img(output), to_img(img)) # Loss image and tourversion in IMAGE space
-        loss3 = criterion_3(to_img(output), to_img(img)) #Loss image and first frame of the scene
+        loss3 = criterion_3(to_img(output), to_img(next_frame)) # Loss with de directly next frame
 
         # Save the loss for each criterion at each step
         experiment.log_metric("loss_1_train", loss1, step=epoch)
@@ -253,11 +267,12 @@ for epoch in range(num_epochs):
         model.eval()
         running_vloss = 0.0
         for i, vdata in enumerate(dataloader_val):
-            img, img_gray, img_color = create_samples(vdata)
+            img, img_gray, img_color, next_frame = create_samples(vdata)
             voutputs = model(img_gray, img)
-            vloss1 = criterion_2(to_img(voutputs), to_img(img))
-            vloss2 = criterion(voutputs, img)
-            vloss = vloss1+vloss2
+            vloss1 = criterion(voutputs, img)
+            vloss2 = criterion_2(to_img(voutputs), to_img(img))
+            vloss3 = criterion_3(to_img(voutputs), to_img(next_frame))
+            vloss = vloss1+vloss2+vloss3
             running_vloss += vloss
 
             avg_vloss = running_vloss / (i + 1)
@@ -269,7 +284,10 @@ for epoch in range(num_epochs):
 
             pic = to_img(output.cpu().data)
             # plt.imshow(pic[0].transpose(0,2))
-            save_image(pic, f'./dc_img/{str(dt_str)}/image_{epoch}.png')
+            path_save_image =  f'./dc_img/{str(dt_str)}/image_{epoch}.png'
+            save_image(pic, path_save_image)
+            # save the image at the experiment
+            experiment.log_image( f'./dc_img/{str(dt_str)}/image_{epoch}.png', name=f"{str(dt_str)}_{epoch}")
             # torch.save(model.state_dict(), f'./models/{str(dt_str)}/color_network_{epoch}.pth')
 
 

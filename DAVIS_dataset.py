@@ -4,6 +4,7 @@ import torchvision
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
+import kornia as K
 
 path = "C:/video_colorization/data/train/DAVIS"
 path_gray = "C:/video_colorization/Vit-autoencoder/temp"
@@ -55,7 +56,13 @@ class DAVISDataset(Dataset):
         transform=transforms.Compose([
                                     transforms.Resize(self.image_size),
                                     transforms.ToTensor(),
-                                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                                    # K.color.rgb_to_lab,
+                                    # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                                    # K.enhance.Normalize(mean=torch.zeros(3), std=torch.ones(3)),
+                                    # K.enhance.normalize_min_max,
+                                    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+        
+                                    
                                 ])
         x_transformed = transform(x)
         return x_transformed
@@ -71,7 +78,13 @@ class DAVISDataset(Dataset):
         Return the frames that will be colorized, the next frames and 
         the color example frame (first of the sequence).
         """
-        return self.color_examples[index], self.samples[index]
+        # Try get the next frame, if cant possible get the previous one.
+        try:
+            next_frame = self.color_examples[index+1]
+        except:
+            next_frame = self.color_examples[index-1]
+
+        return self.color_examples[index], self.samples[index], next_frame
 
 
 # Create the dataset
@@ -94,8 +107,18 @@ class ReadData():
 # temp_path = "temp/images"
 # dataloader = cls.create_dataLoader(temp_path.split('/')[0], (128, 128), 1)
 
-# datas = DAVISDataset(path_gray, (256, 256))
+# datas = DAVISDataset(path, (256, 256))
 
 # dataloader = torch.utils.data.DataLoader(datas, batch_size=16,shuffle=False)
 # print(next(iter(dataloader))[0].shape)
 # print(next(iter(dataloader))[1].shape)
+# # Save the first image of each sample
+# img = next(iter(dataloader))[0]
+# img_color = next(iter(dataloader))[1]
+# next_frame = next(iter(dataloader))[2]
+# # Plot min max
+# print(img.max())
+# print(img.min())
+
+# import matplotlib.pyplot as plt
+# plt.imshow(img[0].transpose(0,2))

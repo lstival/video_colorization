@@ -54,9 +54,23 @@ def frame_2_video(image_folder, video_name, gray=False, frame_rate=16):
     video.release()
     print("Convertion Done")
 
+
+# Gerenate grayscale videos of all videos in DAVIS_val
+
+# for class_video in os.listdir("C:/video_colorization/data/train/DAVIS_val"):
+#     image_folder = f"C:/video_colorization/data/train/DAVIS_val/{class_video}"
+#     path_video_save = "C:/video_colorization/data/videos/gray/"
+#     video_name = f'{path_video_save}video_{class_video}.mp4'
+
+#     frame_2_video(image_folder, video_name, True)
+
+
 # image_folder = "C:/video_colorization/Vit-autoencoder/temp_result/20221207_111837"
 
-# image_folder = "C:/video_colorization/data/train/DAVIS_val/cows"
-# video_name = 'video_cows.mp4'
+# class_video = "breakdance"
+
+# image_folder = f"C:/video_colorization/data/train/DAVIS_val/{class_video}"
+# path_video_save = "C:/video_colorization/data/videos/gray/"
+# video_name = f'{path_video_save}video_{class_video}.mp4'
 
 # frame_2_video(image_folder, video_name, True)
