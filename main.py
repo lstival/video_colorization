@@ -73,7 +73,7 @@ example_img = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])(ex
 # ================ Read Model =====================
 # predict the color for each frame in the video
 
-from color_model_simple import *
+from architectures.color_model_simple import ColorNetwork
 
 path = f'./models/{str_dt}/color_network.pth'
 

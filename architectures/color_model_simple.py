@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 # vision transform
-from ViT import *
+from architectures.ViT import *
 
 # https://github.com/milesial/Pytorch-UNet
 

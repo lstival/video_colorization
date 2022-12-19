@@ -1,9 +1,9 @@
 # vision transform
-from ViT import *
+from architectures.ViT import *
 
 from torch import nn
 import torch
-from vgg_encoder import VGG_encoder
+from architectures.vgg_encoder import VGG_encoder
 
 def ConvUp2d(in_channel, out_channel, kernel_size=3, stride=2, padding=1):
     """

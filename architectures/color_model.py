@@ -1,5 +1,5 @@
 # vision transform
-from ViT import *
+from architectures.ViT import *
 
 from torch import nn
 import torch

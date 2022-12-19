@@ -35,7 +35,7 @@ import DAVIS_dataset as ld
 # import load_data as ld
 
 # vision transform
-from ViT import *
+from architectures.ViT import *
 
 from edge_detection import *
 
@@ -124,7 +124,7 @@ dataloader_val = dataLoader.create_dataLoader(dataroot_val,
 
 # from color_model_vgg import ColorNetwork
 # from color_model import ColorNetwork
-from color_model_simple import ColorNetwork
+from architectures.color_model_simple import ColorNetwork
 
 ## Model setings
 model = ColorNetwork(1,3,image_size[0],ch_deep=ch_deep).to(device)
@@ -141,12 +141,12 @@ optimizer = torch.optim.Adam(model.parameters(),
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from torchmetrics import PeakSignalNoiseRatio
 from torchmetrics.image.fid import FrechetInceptionDistance
-from piq import ssim, SSIMLoss
+from piq import SSIMLoss
 from piq import VIFLoss
 from piq import VSILoss
 from torch.nn import KLDivLoss
-from vgg_loss import VGGLoss
-from smooth_loss import Loss
+from architectures_losses.vgg_loss import VGGLoss
+from architectures_losses.smooth_loss import Loss
 from pytorch_tools import losses
 
 LPIPS = LearnedPerceptualImagePatchSimilarity(net_type='vgg')
@@ -157,6 +157,7 @@ SSIM = SSIMLoss(data_range=1.)
 PERCEPTUAL = VGGLoss(model='vgg19')
 FID = FrechetInceptionDistance(feature=64)
 VIF = VIFLoss()
+VIF = VSILoss()
 STYLE = losses.StyleLoss(model="vgg19_bn", layers=["21"])
 CONTENT = losses.ContentLoss(model="vgg19_bn", layers=["21"]) #https://github.com/bonlime/pytorch-tools/blob/master/pytorch_tools/losses/vgg_loss.py
 

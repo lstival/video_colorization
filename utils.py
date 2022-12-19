@@ -64,8 +64,8 @@ from piq import ssim, SSIMLoss
 from piq import VIFLoss
 from piq import VSILoss
 from torch.nn import KLDivLoss
-from vgg_loss import VGGLoss
-from smooth_loss import Loss
+from architectures_losses.vgg_loss import VGGLoss
+from architectures_losses.smooth_loss import Loss
 from pytorch_tools import losses
 
 
