@@ -6,6 +6,8 @@ notebooks/
 temp/
 data/
 models/
+losses/
+temp_result/
 
 #Files
 conv_autoencoder.pth

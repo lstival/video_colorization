@@ -80,9 +80,9 @@ class DAVISDataset(Dataset):
         """
         # Try get the next frame, if cant possible get the previous one.
         try:
-            next_frame = self.color_examples[index+1]
+            next_frame = self.samples[index+1]
         except:
-            next_frame = self.color_examples[index-1]
+            next_frame = self.samples[index-1]
 
         return self.color_examples[index], self.samples[index], next_frame
 

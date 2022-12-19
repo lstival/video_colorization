@@ -26,7 +26,7 @@ device = "cuda"
 
 video_class = "parkour"
 
-str_dt = "20221215_173344"
+str_dt = "20221216_130444"
 
 # ================ Read Data ===================
 #recives a video and a example color image
@@ -63,7 +63,7 @@ dataLoader = ld.ReadData()
 
 dataloader = dataLoader.create_dataLoader(temp_path.split('/')[0], image_size, batch_size)
 
-example_path = "C:/video_colorization/data/train/DAVIS_val/parkour/"
+example_path = f"C:/video_colorization/data/train/DAVIS_val/{video_class}/"
 
 # example_img = Image.open(f"{example_path}{str(count-1).zfill(5)}.jpg", )
 example_img = Image.open("C:/video_colorization/data/train/DAVIS_val/parkour/00010.jpg")

@@ -16,6 +16,7 @@ from torchvision import transforms
 from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import kornia as K
+from utils import *
 
 #to create the timestamp
 from datetime import datetime
@@ -27,7 +28,7 @@ dt_str = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 # Import comet to log the model training
 import comet_ml
-comet_ml.init(project_name="natural_video_colorization")
+comet_ml.init(project_name="natural_video_colorization", log_code=True, log_graph=True)
 
 #  dataloader class
 import DAVIS_dataset as ld
@@ -65,12 +66,10 @@ os.makedirs(path_loss, exist_ok=True)
 
 # torch tensor to image
 def to_img(x):
-    # x = K.color.lab_to_rgb(x)
     x = 0.5 * (x + 1)
     x = x.clamp(0, 1)
     x = x.view(x.size(0), 3, image_size[0], image_size[1])
 
-    # x = K.tensor_to_image(x)
     return x  
 
 # ================ Read Data =====================
@@ -100,14 +99,14 @@ dataroot_val = f"C:/video_colorization/data/train/{used_dataset}_val"
 image_size = (128, 128)
 
 # Batch size during training
-batch_size = 80
-num_epochs = 51
+batch_size = 45
+num_epochs = 101
 model_deep = 128
 
-learning_rate = 3e-2
+learning_rate = 1e-2
 
 # Number min number of channels in the model
-ch_deep=64
+ch_deep=40
 # hyper_params = {"batch_size": batch_size, 
 #         "num_epochs": num_epochs, 
 #         "learning_rate": learning_rate}
@@ -148,7 +147,7 @@ from piq import VSILoss
 from torch.nn import KLDivLoss
 from vgg_loss import VGGLoss
 from smooth_loss import Loss
-
+from pytorch_tools import losses
 
 LPIPS = LearnedPerceptualImagePatchSimilarity(net_type='vgg')
 PSNR = PeakSignalNoiseRatio()
@@ -158,16 +157,19 @@ SSIM = SSIMLoss(data_range=1.)
 PERCEPTUAL = VGGLoss(model='vgg19')
 FID = FrechetInceptionDistance(feature=64)
 VIF = VIFLoss()
+STYLE = losses.StyleLoss(model="vgg19_bn", layers=["21"])
+CONTENT = losses.ContentLoss(model="vgg19_bn", layers=["21"]) #https://github.com/bonlime/pytorch-tools/blob/master/pytorch_tools/losses/vgg_loss.py
 
 # Falta Vram
+
 
 # learning rate of the netowrk
 dic_losses = {}
 
 # define the loss
 criterion = MSE # Apply in the output
-criterion_2 = SSIM # Apply in image from output
-criterion_3 = LPIPS # Apply in the output (original image and first frame of scene)
+criterion_2 = LPIPS # Apply in image from output
+criterion_3 = CONTENT # Apply in the output (original image and first frame of scene)
 
 criterion.to(device)
 criterion_2.to(device)
@@ -184,9 +186,9 @@ params = {
     "weight_decay": 1e-5,
     "dataset": used_dataset,
     "optimizer": str(type(optimizer)).split('.')[-1].split("'")[0],
-    "criterion": str(type(criterion)).split('.')[-1].split("'")[0],
-    "criterion_2": str(type(criterion_2)).split('.')[-1].split("'")[0],
-    "criterion_3": str(type(criterion_3)).split('.')[-1].split("'")[0],
+    # "criterion": str(type(criterion)).split('.')[-1].split("'")[0],
+    # "criterion_2": str(type(criterion_2)).split('.')[-1].split("'")[0],
+    # "criterion_3": str(type(criterion_3)).split('.')[-1].split("'")[0],
     "vit": "ViT",
     "network": "simple_color_model",
     "ch_deep": ch_deep,
@@ -230,16 +232,13 @@ for epoch in range(num_epochs):
         # ================== Forward ====================
         output = model(img_gray, img_color)
 
-        loss1 = criterion(output, img) # Loss image and your version RGB
-        loss2 = criterion_2(to_img(output), to_img(img)) # Loss image and tourversion in IMAGE space
-        loss3 = criterion_3(to_img(output), to_img(next_frame)) # Loss with de directly next frame
+        # criterios = [criterion, criterion_2, criterion_3]
+        criterios = [criterion, criterion_2, criterion_3]
 
-        # Save the loss for each criterion at each step
-        experiment.log_metric("loss_1_train", loss1, step=epoch)
-        experiment.log_metric("loss_2_train", loss2, step=epoch)
-        experiment.log_metric("loss_3_train", loss3, step=epoch)
+        loss, dict_losses = model_losses(criterios, [output, to_img(img), to_img(next_frame), to_img(output)])
 
-        loss = loss2 + loss1 + loss3
+        for key, value in dict_losses.items():
+            commet_log_metric(experiment, key, value, epoch)
 
         # ================== Backward ===================
         optimizer.zero_grad()
@@ -268,11 +267,14 @@ for epoch in range(num_epochs):
         running_vloss = 0.0
         for i, vdata in enumerate(dataloader_val):
             img, img_gray, img_color, next_frame = create_samples(vdata)
-            voutputs = model(img_gray, img)
-            vloss1 = criterion(voutputs, img)
-            vloss2 = criterion_2(to_img(voutputs), to_img(img))
-            vloss3 = criterion_3(to_img(voutputs), to_img(next_frame))
-            vloss = vloss1+vloss2+vloss3
+            voutputs = model(img_gray, img_color)
+
+            vloss, dict_losses_val  = model_losses(criterios, [voutputs, to_img(img), to_img(next_frame), to_img(voutputs)])
+
+            for key, value in dict_losses_val.items():
+                commet_log_metric(experiment, key, value, epoch, me_type="val")
+
+            # vloss = vloss1+vloss2+vloss3
             running_vloss += vloss
 
             avg_vloss = running_vloss / (i + 1)
