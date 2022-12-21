@@ -99,8 +99,8 @@ dataroot_val = f"C:/video_colorization/data/train/{used_dataset}_val"
 image_size = (128, 128)
 
 # Batch size during training
-batch_size = 45
-num_epochs = 101
+batch_size = 60
+num_epochs = 201
 model_deep = 128
 
 learning_rate = 1e-2
@@ -169,12 +169,15 @@ dic_losses = {}
 
 # define the loss
 criterion = MSE # Apply in the output
-criterion_2 = LPIPS # Apply in image from output
+criterion_2 = PERCEPTUAL # Apply in image from output
 criterion_3 = CONTENT # Apply in the output (original image and first frame of scene)
 
 criterion.to(device)
 criterion_2.to(device)
-criterion_3.to(device)
+# criterion_3.to(device)
+
+# criterios = [criterion, criterion_2, criterion_3]
+criterios = [criterion, criterion_2]
 
 # ================ Logs ========================
 params = {
@@ -232,9 +235,6 @@ for epoch in range(num_epochs):
         model.train()
         # ================== Forward ====================
         output = model(img_gray, img_color)
-
-        # criterios = [criterion, criterion_2, criterion_3]
-        criterios = [criterion, criterion_2, criterion_3]
 
         loss, dict_losses = model_losses(criterios, [output, to_img(img), to_img(next_frame), to_img(output)])
 

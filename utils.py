@@ -53,7 +53,7 @@ def frame_2_video(image_folder, video_name, gray=False, frame_rate=16):
         video.write(temp_image)
 
     video.release()
-    print("Convertion Done")
+    # print("Convertion Done")
 
 
  ################## Losses #####################
@@ -122,6 +122,43 @@ def commet_log_metric(experiment, metric_name: str, metric, step: int, me_type="
     Generic method to create the experiment log
     """
     experiment.log_metric(f"{metric_name}_{me_type}", metric, step=step)
+
+
+def create_gray_videos(dataset, path_video_save):
+
+    images_paths = f"C:/video_colorization/data/train/{dataset}"
+    img_classes = os.listdir(images_paths)
+
+    os.makedirs(path_video_save, exist_ok=True)
+
+    for v_class in img_classes:
+
+    # video_name = "C:/video_colorization/data/videos/gray/sunset_gray.mp4"
+        # video_name = f"C:/video_colorization/data/videos/videvo_gray/{v_class}.mp4"
+        image_folder = f"C:/video_colorization/data/train/{dataset}/{v_class}"
+        
+        video_name = f'{path_video_save}{v_class}.mp4'
+
+        frame_2_video(image_folder, video_name, True)
+
+    assert len(img_classes) == len(os.listdir(path_video_save)), "Created videos must be same amout of files that video classes."
+
+    print("Gray videos created")
+
+from architectures.color_model_simple import ColorNetwork
+
+def load_trained_model(model_path, image_size, device):
+
+    #old
+    # model = ColorNetwork(in_channel=1, out_channel=128, stride=2, padding=2,img_size=image_size[0]).to(device)
+    model = ColorNetwork(1, 3, image_size[0], ch_deep=40).to(device)
+
+    checkpoint = torch.load(model_path)
+    model.load_state_dict(checkpoint)
+    model.to(device)
+
+    return model
+
 
 
 # Gerenate grayscale videos of all videos in DAVIS_val
