@@ -78,7 +78,7 @@ class OutConv(nn.Module):
         return self.conv(x)
 
 class ColorNetwork(nn.Module):
-    def __init__(self, n_channels, n_classes, img_size=128, ch_deep=32, bilinear=False):
+    def __init__(self, n_channels, n_classes, img_size=128, ch_deep=40, bilinear=False):
         super(ColorNetwork, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes

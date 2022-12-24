@@ -17,6 +17,7 @@ from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import kornia as K
 from utils import *
+from pyautogui import press
 
 #to create the timestamp
 from datetime import datetime
@@ -29,6 +30,8 @@ dt_str = datetime.now().strftime('%Y%m%d_%H%M%S')
 # Import comet to log the model training
 import comet_ml
 comet_ml.init(project_name="natural_video_colorization", log_code=True, log_graph=True)
+
+press('Enter')
 
 #  dataloader class
 import DAVIS_dataset as ld
@@ -75,7 +78,8 @@ def to_img(x):
 # ================ Read Data =====================
 dataLoader = ld.ReadData()
 
-used_dataset = "DAVIS"
+# used_dataset = "DAVIS"
+used_dataset = "videvo"
 # Root directory for datase
 
 # dataroot = "C:/video_colorization/data/train_10k_animations"
@@ -88,8 +92,14 @@ used_dataset = "DAVIS"
 # dataroot = "C:/video_colorization/data/DAVIS"
 # dataroot_val = "C:/video_colorization/data/DAVIS_val"
 
+
 dataroot = f"C:/video_colorization/data/train/{used_dataset}"
-dataroot_val = f"C:/video_colorization/data/train/{used_dataset}_val"
+
+if used_dataset == "videvo":
+    dataroot_val = f"C:/video_colorization/data/train/{used_dataset}"
+
+else:
+    dataroot_val = f"C:/video_colorization/data/train/{used_dataset}_val"
 
 # https://neptune.ai/blog/pytorch-loss-functions
 
@@ -97,6 +107,7 @@ dataroot_val = f"C:/video_colorization/data/train/{used_dataset}_val"
 # ================ Train Parans ========================
 # Spatial size of training images. All images will be resized to this
 image_size = (128, 128)
+
 
 # Batch size during training
 batch_size = 60
@@ -110,6 +121,7 @@ ch_deep=40
 # hyper_params = {"batch_size": batch_size, 
 #         "num_epochs": num_epochs, 
 #         "learning_rate": learning_rate}
+
 
 experiment = comet_ml.Experiment(
     api_key="SNv4ks5JjUxZ1X0FhARDGt4SY",
@@ -157,7 +169,7 @@ SSIM = SSIMLoss(data_range=1.)
 PERCEPTUAL = VGGLoss(model='vgg19')
 FID = FrechetInceptionDistance(feature=64)
 VIF = VIFLoss()
-VIF = VSILoss()
+VIS = VSILoss()
 STYLE = losses.StyleLoss(model="vgg19_bn", layers=["21"])
 CONTENT = losses.ContentLoss(model="vgg19_bn", layers=["21"]) #https://github.com/bonlime/pytorch-tools/blob/master/pytorch_tools/losses/vgg_loss.py
 
@@ -168,16 +180,18 @@ CONTENT = losses.ContentLoss(model="vgg19_bn", layers=["21"]) #https://github.co
 dic_losses = {}
 
 # define the loss
-criterion = MSE # Apply in the output
-criterion_2 = PERCEPTUAL # Apply in image from output
-criterion_3 = CONTENT # Apply in the output (original image and first frame of scene)
+criterion = MAE # Apply in the output
+criterion_2 = SSIM # Apply in image from output
+criterion_3 = LPIPS # Apply in the output (original image and first frame of scene)
 
 criterion.to(device)
 criterion_2.to(device)
-# criterion_3.to(device)
+criterion_3.to(device)
 
-# criterios = [criterion, criterion_2, criterion_3]
-criterios = [criterion, criterion_2]
+
+
+criterios = [criterion, criterion_2, criterion_3]
+# criterios = [criterion, criterion_2]
 
 # ================ Logs ========================
 params = {
