@@ -151,9 +151,12 @@ def load_trained_model(model_path, image_size, device):
 
     #old
     # model = ColorNetwork(in_channel=1, out_channel=128, stride=2, padding=2,img_size=image_size[0]).to(device)
-    model = ColorNetwork(1, 3, image_size[0], ch_deep=40).to(device)
 
     checkpoint = torch.load(model_path)
+    #Get the number of channels in the first layer
+    ch_deep = checkpoint["inc.double_conv.0.weight"].shape[0]
+
+    model = ColorNetwork(1, 3, image_size[0], ch_deep).to(device)
     model.load_state_dict(checkpoint)
     model.to(device)
 

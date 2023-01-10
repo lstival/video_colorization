@@ -17,7 +17,6 @@ from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import kornia as K
 from utils import *
-from pyautogui import press
 
 #to create the timestamp
 from datetime import datetime
@@ -30,8 +29,6 @@ dt_str = datetime.now().strftime('%Y%m%d_%H%M%S')
 # Import comet to log the model training
 import comet_ml
 comet_ml.init(project_name="natural_video_colorization", log_code=True, log_graph=True)
-
-press('Enter')
 
 #  dataloader class
 import DAVIS_dataset as ld
