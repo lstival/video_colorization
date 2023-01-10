@@ -27,9 +27,9 @@ dataLoader = ld.ReadData()
 image_size = (128, 128)
 device = "cuda"
 # video_class = "parkour"
-str_dt = "20221222_174634"
-# dataset = "DAVIS_val"
-dataset = "videvo"
+str_dt = "20221223_160049"
+dataset = "DAVIS_val"
+# dataset = "videvo"
 batch_size = 1
 
 # List all classes to be evaluated

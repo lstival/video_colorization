@@ -9,6 +9,7 @@ from torchvision import transforms
 to_tensor = transforms.PILToTensor()
 
 from piq import ssim, psnr
+from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
 import DAVIS_dataset as ld
 dataLoader = ld.ReadData()
@@ -20,10 +21,10 @@ from utils import *
 image_size = (128, 128)
 device = "cuda"
 # video_class = "parkour"
-str_dt = "20221222_174634"
+str_dt = "20221223_160049"
 
-# dataset = "DAVIS_val"
-dataset = "videvo"
+dataset = "DAVIS_val"
+# dataset = "videvo"
 
 images_paths = f"C:/video_colorization/data/train/{dataset}"
 
@@ -47,6 +48,8 @@ def get_frames(path, frame) -> torch.Tensor:
     return read_frame
 
 dict_metrics = {}
+
+lpips = LearnedPerceptualImagePatchSimilarity(net_type='vgg', normalize=True)
 
 pbar = tqdm(img_classes)
 for v_class in pbar:
@@ -80,7 +83,10 @@ for v_class in pbar:
         # PSNR Values
         psnr_frame = psnr(t_original_frmaes, t_colored_frames)
 
-        dict_metrics[v_class] = [float(ssim_frame), float(psnr_frame)]
+        # LPISP values
+        lpips_frame = lpips(t_original_frmaes, t_colored_frames).item()
+
+        dict_metrics[v_class] = [float(ssim_frame), float(psnr_frame), float(lpips_frame)]
         # dict_metrics[f"{v_class}_ssim"] = ssim_frame
         # dict_metrics[f"{v_class}_psnr"] = psnr_frame
 
@@ -98,5 +104,5 @@ os.makedirs(metric_path, exist_ok=True)
 import pandas as pd
 df_metrics = pd.DataFrame.from_dict(dict_metrics)
 df_metrics = df_metrics.T
-df_metrics.columns = ["SSIM", "PSNR"]
+df_metrics.columns = ["SSIM", "PSNR", "LPISP"]
 df_metrics.to_csv(f"{metric_path}model_metrics.csv")
