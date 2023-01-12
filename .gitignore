@@ -8,6 +8,9 @@ data/
 models/
 losses/
 temp_result/
+videos_output/
+models_metrics/
+
 
 #Files
 conv_autoencoder.pth

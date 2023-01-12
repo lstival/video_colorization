@@ -28,8 +28,8 @@ image_size = (128, 128)
 device = "cuda"
 # video_class = "parkour"
 str_dt = "20221223_160049"
-dataset = "DAVIS_val"
-# dataset = "videvo"
+# dataset = "DAVIS_val"
+dataset = "videvo"
 batch_size = 1
 
 # List all classes to be evaluated
@@ -75,12 +75,12 @@ pbar = tqdm(avaliable_models)
 for str_dt in pbar:
     pbar.set_description(f"Processing: {str_dt}")
 
-    temp_path = f"temp/{str_dt}/"
+    temp_path = f"temp/{dataset}/"
 
-    if os.path.exists(temp_path):
-        shutil.rmtree(temp_path)
+    # if os.path.exists(temp_path):
+    #     shutil.rmtree(temp_path)
 
-    os.makedirs(temp_path)
+    os.makedirs(temp_path, exist_ok=True)
 
     # ================ Read Video =====================
     path_gray_video = f"C:/video_colorization/data/videos/{dataset}_gray/"
@@ -115,13 +115,15 @@ for str_dt in pbar:
         list_frames = []
 
         path_temp_gray_frames = f"{temp_path}{video_name.split('.')[0]}"
-        os.makedirs(f"{path_temp_gray_frames}/images/", exist_ok=True)
+        if not os.path.exists(path_temp_gray_frames):
 
-        while success:
-            cv2.imwrite(f"{path_temp_gray_frames}/images/{str(count).zfill(5)}.jpg", image)     # save frame as JPEG file      
-            success,image = vidcap.read()
-            list_frames.append(image)
-            count += 1
+            os.makedirs(f"{path_temp_gray_frames}/images/", exist_ok=True)
+
+            while success:
+                cv2.imwrite(f"{path_temp_gray_frames}/images/{str(count).zfill(5)}.jpg", image)     # save frame as JPEG file      
+                success,image = vidcap.read()
+                list_frames.append(image)
+                count += 1
         # print("Finsh")
 
 
@@ -142,7 +144,7 @@ for str_dt in pbar:
 
         outs = []
         # path to save colored frames
-        colored_frames_save = f"temp_result/{str_dt}/{video_name}/"
+        colored_frames_save = f"temp_result/{dataset}/{str_dt}/{video_name}/"
 
         if os.path.exists(colored_frames_save):
             shutil.rmtree(colored_frames_save)

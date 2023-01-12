@@ -23,8 +23,9 @@ device = "cuda"
 # video_class = "parkour"
 str_dt = "20221223_160049"
 
-dataset = "DAVIS_val"
-# dataset = "videvo"
+# dataset = "DAVIS_val"
+# dataset = "DAVIS"
+dataset = "videvo"
 
 images_paths = f"C:/video_colorization/data/train/{dataset}"
 
@@ -44,7 +45,7 @@ def get_frames(path, frame) -> torch.Tensor:
 
     return read_frame
 
-root_results = "temp_result"
+root_results = f"temp_result/{dataset}"
 list_results_folders = os.listdir(root_results)
 
 pbar = tqdm(list_results_folders)
@@ -106,7 +107,7 @@ for str_dt in pbar:
             pass
 
 
-    metric_path = f"models_metrics/{str_dt}/"
+    metric_path = f"models_metrics/{dataset}/{str_dt}/"
     os.makedirs(metric_path, exist_ok=True)
 
     import pandas as pd
