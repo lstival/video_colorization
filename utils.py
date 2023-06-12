@@ -66,7 +66,7 @@ from piq import VSILoss
 from torch.nn import KLDivLoss
 from architectures_losses.vgg_loss import VGGLoss
 from architectures_losses.smooth_loss import Loss
-from pytorch_tools import losses
+# from pytorch_tools import losses
 
 
 def valid_loss(loss) -> torch.Tensor:
@@ -162,7 +162,25 @@ def load_trained_model(model_path, image_size, device):
 
     return model
 
+def generate_paper_colored_samples(
+    # dataset = "DAVIS",
+    root_path_images = f"C:/video_colorization/Vit-autoencoder/temp_result/DAVIS",
+    frame_number = "00042",
+    root_path_destiny = "images_to_paper",
+    video_name = "rallye.mp4"):
 
+    os.makedirs(root_path_destiny, exist_ok=True)
+
+    import shutil
+    list_models = os.listdir(root_path_images)
+
+    for model in list_models:
+        origin_path = f"{root_path_images}/{model}/{video_name}/{frame_number}.jpg"
+
+        destiny_path = f"{root_path_destiny}/{video_name}"
+        os.makedirs(destiny_path, exist_ok=True)
+
+        shutil.copy(origin_path, f"{destiny_path}/{model}_{frame_number}.jpg")
 
 # Gerenate grayscale videos of all videos in DAVIS_val
 
@@ -183,3 +201,74 @@ def load_trained_model(model_path, image_size, device):
 # video_name = f'{path_video_save}video_{class_video}.mp4'
 
 # frame_2_video(image_folder, video_name, True)
+
+def get_model_time():
+    from datetime import datetime
+    #to create the timestamp
+    dt = datetime.now()
+    # dt_str = datetime.timestamp(dt)
+
+    dt_str = str(dt).replace(':','.')
+    dt_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    return dt_str
+
+def save_losses(dic_losses, filename="losses_network_v1"):
+    os.makedirs("losses", exist_ok=True)
+    fout = f"{filename}.csv"
+    fo = open(fout, "w")
+
+    for k, v in dic_losses.items():
+        fo.write(str(k) + "," +str(float(v.cpu().numpy())) + '\n')
+
+    fo.close()
+
+# torch tensor to image
+def to_img(x):
+    x = 0.5 * (x + 1)
+    x = x.clamp(0, 1)
+    x = x.view(x.size(0), 3, 224, 224)
+
+    return x  
+
+def create_samples(data):
+    """
+    img: Image with RGB colors (ground truth)
+    img_gray: Grayscale version of the img (this) variable will be used to be colorized
+    img_color: the image with color that bt used as example (first at the scene)
+    """
+
+    # Test if the pos_color must be returned
+    if len(data) == 4:
+        img, img_color, next_frame, random_frame = data
+        if isinstance(img, list):
+            img, img_color, next_frame, random_frame = img[0], img_color[0], next_frame[0], random_frame[0]
+    else:
+        img, img_color, next_frame = data
+
+        if isinstance(img, list):
+            img, img_color, next_frame = img[0], img_color[0], next_frame[0]
+
+    return img, img_color, next_frame
+
+def is_notebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+
+def scale_0_and_1(tensor):
+    """
+    Recives a tensor and return their values between 0 and 1
+    """
+    tensor_min = tensor.min()
+    tensor_max = tensor.max()
+    tensor_rescaled = (tensor - tensor_min) / (tensor_max - tensor_min)
+
+    return tensor_rescaled

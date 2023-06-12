@@ -10,7 +10,9 @@ losses/
 temp_result/
 videos_output/
 models_metrics/
-
+images_to_paper/
+dc_img/
 
 #Files
 conv_autoencoder.pth
+train2.py

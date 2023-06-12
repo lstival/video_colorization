@@ -36,22 +36,22 @@ batch_size = 1
 images_paths = f"C:/video_colorization/data/train/{dataset}"
 img_classes = os.listdir(images_paths)
 
-def create_samples(data):
-    """
-    img: Image with RGB colors
-    img_gray: Grayscale version of the img (this) variable will be used to be colorized
-    img_color: the image with color that bt used as example (first at the scene)
-    """
-    img, img_color, _ = data
-    img_gray = transforms.Grayscale(num_output_channels=1)(img)
-    imgs_2.append(img)
-    imgs_2_gray.append(img_gray)
+# def create_samples(data):
+#     """
+#     img: Image with RGB colors
+#     img_gray: Grayscale version of the img (this) variable will be used to be colorized
+#     img_color: the image with color that bt used as example (first at the scene)
+#     """
+#     img, img_color, _ = data
+#     img_gray = transforms.Grayscale(num_output_channels=1)(img)
+#     imgs_2.append(img)
+#     imgs_2_gray.append(img_gray)
 
-    img.to(device)
-    img_gray.to(device)
-    img_color.to(device)
+#     img.to(device)
+#     img_gray.to(device)
+#     img_color.to(device)
 
-    return img, img_gray, img_color
+#     return img, img_gray, img_color
 
 
 # torch tensor to image

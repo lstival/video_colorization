@@ -43,7 +43,7 @@ class ReadData():
     def __init__(self) -> None:
         super().__init__()
 
-    def create_dataLoader(self, dataroot, image_size, batch_size, shuffle=True):
+    def create_dataLoader(self, dataroot, image_size, batch_size, shuffle=True, train=True):
         """
         Read all imagens from the folder and convert them in lab space,
         as result a Data Loader as created and returned:
@@ -54,18 +54,25 @@ class ReadData():
         batch_size: Number the samples for batch (Default: 2)
 
         """
-        dataset = dset.ImageFolder(root=dataroot,
-                                transform=transforms.Compose([
-                                        transforms.Resize(image_size),
-                                        # transforms.CenterCrop(image_size),
-                                        #convert RGB image to LAB
-                                        # transforms.Lambda(lambda x: color_trans.rgb2lab(x)),
-                                        # transforms.Grayscale(num_output_channels=1),
-                                        transforms.ToTensor(),
-                                        # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                        # Alexnet
-                                        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        if train:
+            dataset = dset.ImageFolder(root=dataroot,
+                                    transform=transforms.Compose([
+                                    transforms.Resize(int(image_size*1.25)),  # image_size + 1/4
+                                    transforms.RandomResizedCrop(image_size, scale=(0.8, 1.0)),
+                                    transforms.RandomRotation((0, 365)),
+                                    transforms.Resize((image_size, image_size)),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
                                 ]))
+        
+        else:
+            dataset = dset.ImageFolder(root=dataroot, 
+                                    transform=transforms.Compose([
+                                    transforms.Resize((image_size, image_size)),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+                                ]))
+            
         # Create the dataloader
         self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                             shuffle=shuffle)
@@ -79,3 +86,11 @@ class ReadData():
         tensor2image = transforms.ToPILImage()
         exmp_img = tensor2image(img[0][0])
         return exmp_img
+
+if __name__ == "__main__":
+    print("Main")
+
+    read_data = ReadData()
+    dataroot = "C:/video_colorization/data/train/mini_DAVIS"
+    dataloader = read_data.create_dataLoader(dataroot, 224, 2, train=False)
+    aa = next(iter(dataloader))
