@@ -1,6 +1,9 @@
 import cv2
 import os
 import torch
+import matplotlib.pyplot as plt
+from torchvision import transforms
+from architectures.swin_unet import Swin_Unet
 
 def read_frames(image_folder,):
     """
@@ -56,7 +59,7 @@ def frame_2_video(image_folder, video_name, gray=False, frame_rate=16):
     # print("Convertion Done")
 
 
- ################## Losses #####################
+################## Losses #####################
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from torchmetrics import PeakSignalNoiseRatio
 from torchmetrics.image.fid import FrechetInceptionDistance
@@ -154,9 +157,11 @@ def load_trained_model(model_path, image_size, device):
 
     checkpoint = torch.load(model_path)
     #Get the number of channels in the first layer
-    ch_deep = checkpoint["inc.double_conv.0.weight"].shape[0]
+    ch_deep = 128
+    # ch_deep = checkpoint["inc.double_conv.0.weight"].shape[0]
 
-    model = ColorNetwork(1, 3, image_size[0], ch_deep).to(device)
+    # model = ColorNetwork(1, 3, image_size[0], ch_deep).to(device)
+    model = Swin_Unet(net_dimension=ch_deep, c_out=3, img_size=image_size).to(device)
     model.load_state_dict(checkpoint)
     model.to(device)
 
@@ -227,11 +232,11 @@ def save_losses(dic_losses, filename="losses_network_v1"):
 def to_img(x):
     x = 0.5 * (x + 1)
     x = x.clamp(0, 1)
-    x = x.view(x.size(0), 3, 224, 224)
+    x = x.view(x.size(0), 3, x.shape[2], x.shape[2])
 
     return x  
 
-def create_samples(data):
+def create_samples(data, constrative=False):
     """
     img: Image with RGB colors (ground truth)
     img_gray: Grayscale version of the img (this) variable will be used to be colorized
@@ -249,7 +254,15 @@ def create_samples(data):
         if isinstance(img, list):
             img, img_color, next_frame = img[0], img_color[0], next_frame[0]
 
-    return img, img_color, next_frame
+    img_gray = transforms.Grayscale(num_output_channels=3)(img)
+    gray_next_frame = transforms.Grayscale(num_output_channels=3)(next_frame)
+    # img_gray = img[:,:1,:,:]
+
+    if constrative:
+        return img, img_gray, img_color, next_frame
+    else:
+        return img, img_gray, img_color, gray_next_frame
+
 
 def is_notebook():
     try:
@@ -272,3 +285,13 @@ def scale_0_and_1(tensor):
     tensor_rescaled = (tensor - tensor_min) / (tensor_max - tensor_min)
 
     return tensor_rescaled
+
+def plot_images(images):
+    plt.figure(figsize=(32, 32))
+    plt.imshow(torch.cat([
+        torch.cat([i for i in images.cpu()], dim=-1),
+    ], dim=-2).permute(1, 2, 0).cpu())
+    plt.show()
+
+def resume(model, filename):
+    model.load_state_dict(torch.load(filename))
