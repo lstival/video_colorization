@@ -4,7 +4,6 @@ import os
 import torch
 from torch import nn
 from torchvision.utils import save_image
-import matplotlib.pyplot as plt
 import kornia as K
 from utils import *
 # import comet_ml
@@ -17,17 +16,15 @@ from architectures.flow import Flow_Network
 from old.edge_detection import *
 
 # ================ Importing Losses ========================
-
+from architectures_losses.losses import ContentLoss, StyleLoss
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from torchmetrics import PeakSignalNoiseRatio
-from torchmetrics.image.fid import FrechetInceptionDistance
 from piq import SSIMLoss
 from piq import VIFLoss
 from piq import VSILoss
-from torch.nn import KLDivLoss
 from architectures_losses.vgg_loss import VGGLoss
-from architectures_losses.smooth_loss import Loss
 import torchvision.models as models
+import argparse as ap
 
 def validation(dataloader_val, model, color_network, criterions, swin_model):
     total_loss = 0
@@ -72,8 +69,9 @@ def train(dataroot, dataroot_val, criterions, batch_size, num_epochs, pretrained
     # Define the model
     model = Swin_Unet(net_dimension=ch_deep, c_out=3, img_size=image_size).to(device)
 
-    if pretrained:
-        resume(model, os.path.join("models", pretrained, "color_network.pth"))
+    #Check pretraines
+    # if pretrained is not None:
+    #     resume(model, os.path.join("models", pretrained, "color_network.pth"))
 
     model.train()
 
@@ -108,14 +106,35 @@ def train(dataroot, dataroot_val, criterions, batch_size, num_epochs, pretrained
             outputs = model(img_gray, labels, flow, swin_model)
 
             # Loss
-            criterions[0].to(device)
-            loss = criterions[0]((outputs), (img))
-            total_loss += loss.item()
+            if len(criterions) == 1:
+                criterions[0].to(device)
+                loss = criterions[0]((outputs), (img))
+                total_loss += loss.item()
 
-            # Loss 2
-            criterions[1].to(device)
-            loss_2 = criterions[1](to_img(outputs), to_img(img))
-            total_loss += loss_2.item()
+            if len(criterions) == 2:
+                criterions[0].to(device)
+                loss = criterions[0]((outputs), (img))
+                total_loss += loss.item()
+
+                # Loss 2
+                criterions[1].to(device)
+                loss_2 = criterions[1](to_img(outputs), to_img(img))
+                total_loss += loss_2.item()
+
+            if len(criterions) == 3:
+                criterions[0].to(device)
+                loss = criterions[0]((outputs), (img))
+                total_loss += loss.item()
+
+                # Loss 2
+                criterions[1].to(device)
+                loss_2 = criterions[1](to_img(outputs), to_img(img))
+                total_loss += loss_2.item()
+
+                # Loss 3
+                criterions[2].to(device)
+                loss_3 = criterions[2](to_img(outputs), to_img(img))
+                total_loss += loss_3.item()
 
             # Backpropagation
             optimizer.zero_grad()
@@ -165,10 +184,83 @@ def train(dataroot, dataroot_val, criterions, batch_size, num_epochs, pretrained
             # experiment.log_image( f'./dc_img/{str(dt_str)}/image_{epoch}.png', name=f"{str(dt_str)}_{epoch}")
             torch.save(model.state_dict(), f'./models/{str(dt_str)}/color_network.pth')
 
-if __name__ == "__main__":
+# Read the args from to the file
+# Loss function
+LPIPS = LearnedPerceptualImagePatchSimilarity(net_type="vgg")
+PSNR = PeakSignalNoiseRatio()
+MSE = nn.MSELoss()
+MAE = nn.L1Loss()
+SSIM = SSIMLoss(data_range=1.)
+PERCEPTUAL = VGGLoss(model='vgg19')
+# FID = FrechetInceptionDistance(feature=64)
+VIF = VIFLoss()
+VIS = VSILoss()
+CONTENT = ContentLoss
+STYLE = StyleLoss
 
+
+# Criterions
+criterions = [
+[MSE],
+[MAE],
+[MAE , SSIM],
+[MSE , SSIM],
+[MAE , CONTENT],
+[MSE , CONTENT],
+[MAE , PSNR],
+[MSE , PSNR],
+[MSE , LPIPS],
+[MAE , LPIPS],
+[MAE , PERCEPTUAL],
+[MSE , PERCEPTUAL],
+[MAE , SSIM , PERCEPTUAL],
+[MSE , SSIM , PERCEPTUAL],
+[MSE , LPIPS , SSIM],
+[MAE , LPIPS , SSIM],
+[MAE , LPIPS , CONTENT],
+[MSE , LPIPS , CONTENT],
+[MAE , SSIM , LPIPS],
+[MSE , SSIM , LPIPS],
+[MAE , SSIM , STYLE],
+[MSE , SSIM , STYLE]
+]
+
+parser = ap.ArgumentParser()
+parser.add_argument("--criterion", type=list, default=0)
+parser.add_argument("--batch_size", type=int, default=3)
+parser.add_argument("--num_epochs", type=int, default=101)
+parser.add_argument("--model_deep", type=int, default=64)
+parser.add_argument("--learning_rate", type=float, default=2e-4)
+parser.add_argument("--ch_deep", type=int, default=128)
+parser.add_argument("--pretrained", type=str, default=None)
+parser.add_argument("--image_size", type=int, default=256)
+parser.add_argument("--dataroot", type=str, default="C:/video_colorization/data/train/DAVIS")
+parser.add_argument("--dataroot_val", type=str, default="C:/video_colorization/data/train/DAVIS_val")
+parser.add_argument("--dt_str", type=str, default=get_model_time())
+
+args = parser.parse_args()
+
+# Hyper parameters
+image_size = args.image_size
+batch_size = args.batch_size
+num_epochs = args.num_epochs
+model_deep = args.model_deep
+learning_rate = args.learning_rate
+ch_deep = args.ch_deep
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dt_str = args.dt_str
+pretrained = args.pretrained
+dataroot = args.dataroot
+dataroot_val = args.dataroot_val
+criterion_idx = int(args.criterion[0])
+
+print(criterion_idx)
+
+train(dataroot, dataroot_val, criterions[criterion_idx], batch_size, num_epochs, pretrained)
+
+if __name__ == "__main__":
     # Loss function
-    LPIPS = LearnedPerceptualImagePatchSimilarity(net_type='alex')
+    LPIPS = LearnedPerceptualImagePatchSimilarity(net_type="vgg")
     PSNR = PeakSignalNoiseRatio()
     MSE = nn.MSELoss()
     MAE = nn.L1Loss()
@@ -178,85 +270,15 @@ if __name__ == "__main__":
     VIF = VIFLoss()
     VIS = VSILoss()
 
-    # ================ Logs ========================
-    # params = {
-    #     "batch_size": batch_size,
-    #     "epochs": num_epochs,
-    #     "img_size": image_size,
-    #     "output_layers": model_deep,
-    #     "layer1_activation": 'relu',
-    #     "learning_rate": learning_rate,
-    #     "criterion": str(type(criterions[0])).split('.')[-1].split("'")[0],
-    #     "criterion_2": str(type(criterions[1])).split('.')[-1].split("'")[0],
-    #     # "criterion_3": str(type(criterions[2])).split('.')[-1].split("'")[0],
-    #     "ch_deep": ch_deep,
-    #     "comment": "",
-    # }
-
-    # experiment = comet_ml.Experiment(
-    # api_key="SNv4ks5JjUxZ1X0FhARDGt4SY",
-    # project_name="swint_unet_colorization",
-    # workspace="lstival")
-    
-    # experiment.log_parameters(params)
-
-    # v.1
-    # MSE
-    # MAE
-    # MAE + SSIM swin_unet_20230614_092638
-    # MSE + SSIM swin_unet_20230613_202030
-    # MAE + CONTENT
-    # MSE + CONTENT
-    # MAE + PSNR swin_unet_20230616_002908
-    # MSE + PSNR
-    # MSE + LPIPS swin_unet_20230614_214005
-    # MAE + LPIPS swin_unet_20230615_120640
-    # MAE + PERCEPTUAL swin_unet_20230619_110942
-    # MSE + PERCEPTUAL
-    # MAE + SSIM + PERCEPTUAL
-    # MSE + SSIM + PERCEPTUAL
-    # MSE + LPIPS + SSIM
-    # MAE + LPIPS + SSIM
-    # MAE + LPIPS + CONTENT
-    # MSE + LPIPS + CONTENT
-    # MAE + SSIM + LPISP
-    # MSE + SSIM + LPISP
-    # MAE + SSIM + STYLE
-    # MSE + SSIM + STYLE
-
-    # v.2
-    # MSE
-    # MAE
-    # MAE + SSIM swin_unet_20230618_124014
-    # MSE + SSIM swin_unet_20230618_235548
-    # MAE + CONTENT
-    # MSE + CONTENT
-    # MAE + PSNR swin_unet_20230616_095558
-    # MSE + PSNR swin_unet_20230616_213126
-    # MSE + LPIPS swin_unet_20230617_111636
-    # MAE + LPIPS  swin_unet_20230617_232118
-    # MAE + PERCEPTUAL swin_unet_20230619_110942
-    # MSE + PERCEPTUAL swin_unet_20230619_223106
-    # MAE + SSIM + PERCEPTUAL
-    # MSE + SSIM + PERCEPTUAL
-    # MSE + LPIPS + SSIM
-    # MAE + LPIPS + SSIM
-    # MAE + LPIPS + CONTENT
-    # MSE + LPIPS + CONTENT
-    # MAE + SSIM + LPISP
-    # MSE + SSIM + LPISP
-    # MAE + SSIM + STYLE
-    # MSE + SSIM + STYLE
-
     # Hyper parameters
-    image_size = 128
-    batch_size = 25
-    num_epochs = 201
-    model_deep = 128
+    image_size = 256
+    batch_size = 3
+    num_epochs = 101
+    model_deep = 64
     learning_rate = 2e-4
     ch_deep=128
 
-    criterions = [MSE, PERCEPTUAL]
+    criterions = [MSE, LPIPS, PERCEPTUAL]
 
     dt_str = get_model_time()
     dt_str = "swin_unet_"+dt_str
@@ -268,7 +290,7 @@ if __name__ == "__main__":
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # pretrained="swin_unet_20230620_192428"
+    # pretrained="swin_unet_20230621_205446"
     pretrained=None
 
     # Root directory for datase

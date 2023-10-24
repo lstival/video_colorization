@@ -82,26 +82,27 @@ class Down(nn.Module):
         return x
 
 class Swin_Unet(nn.Module):
-    def __init__(self, net_dimension=256, img_size=224, c_out=3) -> None:
+    def __init__(self, net_dimension=64, img_size=256, c_out=3) -> None:
         super().__init__()
 
         # Define the bottleneck
-        self.bot1 = DoubleConv(768, 256)
+        self.bot1 = DoubleConv(768, 128)
 
         # Color Agreement
-        self.color1 = DoubleConv(512, 256)
-        self.color2 = DoubleConv(256, 128)
-        self.color3 = DoubleConv(128, 64)
+        self.color1 = DoubleConv(512, 128)
+        self.color2 = DoubleConv(128, 64)
+        self.color3 = DoubleConv(64, 32)
 
         # Flow Agreement
-        self.flow1 = Down(2, 16)
-        self.flow2 = Down(16, 32)
-        self.flow3 = Down(32, 64)
-        self.flow4 = Down(64, 128)
-        self.flow5 = Down(128, 256)
+        self.flow1 = Down(2, 4)
+        self.flow2 = Down(4, 8)
+        self.flow3 = Down(8, 16)
+        self.flow4 = Down(16, 32)
+        self.flow5 = Down(32, 32)
 
         # Define the decoder
-        self.up1 = Up((384+196+256+256), net_dimension*4)
+        # self.up1 = Up((384+98+128+32), net_dimension*4)
+        self.up1 = Up((384+192), net_dimension*4)
         self.sa1 = SelfAttention(net_dimension*4, img_size//16)
 
         self.up2 = Up(192+(net_dimension*4), net_dimension*2)
@@ -138,7 +139,7 @@ class Swin_Unet(nn.Module):
         x_color = self.color1(labels)
         x_color = self.color2(x_color)
         x_color = self.color3(x_color)
-        x_color = x_color.view(-1, 196, 4, 4)
+        # x_color = x_color.view(-1, 64, 8, 8)
 
         # Flow
         x_flow = self.flow1(flow)
@@ -177,11 +178,12 @@ if __name__ == "__main__":
     
     # Images create
     batch_size = 2
-    img_size = 128
-    net_dimension=128
+    img_size = 256
+    net_dimension=32
+
     img = torch.rand((batch_size, 3, img_size, img_size)).to("cuda")
     # label = torch.rand((batch_size, 49, 768)).to("cuda")
-    label = torch.rand((batch_size, 512, 7, 7)).to("cuda")
+    label = torch.rand((batch_size, 512, 8, 8)).to("cuda")
     
     # Define the pretrained Encoder
     swin_model = models.swin_v2_t(weights=models.Swin_V2_T_Weights.IMAGENET1K_V1).to("cuda").features

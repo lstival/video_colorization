@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from torchvision import models, transforms
+from torchvision.models import VGG19_Weights, VGG16_Weights
 
 
 class Lambda(nn.Module):
@@ -72,7 +73,10 @@ class VGGLoss(nn.Module):
         self.reduction = reduction
         self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                               std=[0.229, 0.224, 0.225])
-        self.model = self.models[model](pretrained=True).features[:layer+1]
+        if model == 'vgg16':
+            self.model = self.models[model](weights=VGG16_Weights.IMAGENET1K_V1).features[:layer+1]
+        else:
+            self.model = self.models[model](weights=VGG19_Weights.IMAGENET1K_V1).features[:layer+1]
         self.model.eval()
         self.model.requires_grad_(False)
 

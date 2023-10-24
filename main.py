@@ -23,17 +23,18 @@ from utils import *
 
 import shutil
 from architectures.color_model_simple import ColorNetwork
+from architectures.flow import Flow_Network
 
 dataLoader = ld.ReadData()
 
 image_size = 128
 device = "cuda"
 # video_class = "parkour"
-str_dt = "swin_unet_20230620_230318"
+str_dt = "swin_unet_20230621_205446"
 # dataset = "DAVIS_val"
-dataset = "DAVIS_test"
+dataset = "DAVIS_val"
 batch_size = 1
-data_type = "test"
+data_type = "train"
 
 # List all classes to be evaluated
 images_paths = f"C:/video_colorization/data/{data_type}/{dataset}"
@@ -105,6 +106,10 @@ for str_dt in pbar:
     color_network = Vit_neck().to(device)
     swin_model = models.swin_v2_t(weights=models.Swin_V2_T_Weights.IMAGENET1K_V1).to("cuda").features
 
+    # Define the pretrained Flow Network
+    flow_model = Flow_Network().to("cuda")
+    flow_model.eval()
+
     # except:
     #     model = load_trained_model(model_path, image_size, device, ch_deep=40)
     # except:
@@ -169,17 +174,20 @@ for str_dt in pbar:
 
             for idx, data in enumerate(dataloader):
 
-                img, img_gray, img_color = create_samples(data)
+                img, img_gray, img_color, next_frame = create_samples(data)
 
                 img_color = img_color.to(device)
                 img_gray = img_gray.to(device)
+                next_frame = next_frame.to(device)
 
                 imgs_data.append(img_gray)
 
                 labels = color_network(img_color)
 
+                flow = flow_model(img_gray, next_frame)
+
                 # img_frame = transforms.Grayscale(num_output_channels=1)(img_frame)
-                out = model(img_gray, labels, swin_model)
+                out = model(img_gray, labels, flow, swin_model)
                 outs.append(out)
 
             for idx, frame in enumerate(outs):

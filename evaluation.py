@@ -22,11 +22,11 @@ import cdc as cdc
 
 image_size = 128
 device = "cuda"
-data_type = "test"
+data_type = "train"
 # video_class = "parkour"
-str_dt = "swin_unet_20230620_230318"
+str_dt = "swin_unet_20230621_205446"
 
-dataset = "DAVIS_test"
+dataset = "DAVIS_val"
 # dataset = "DAVIS"
 # dataset = "videvo"
 
@@ -64,7 +64,7 @@ for str_dt in pbar:
 
     lpips = LearnedPerceptualImagePatchSimilarity(net_type='vgg', normalize=True)
 
-    fid = FrechetInceptionDistance(feature=64)
+    fid = FrechetInceptionDistance(feature=2048)
 
     pbar = tqdm(img_classes)
     for v_class in pbar:

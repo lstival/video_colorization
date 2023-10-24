@@ -295,3 +295,10 @@ def plot_images(images):
 
 def resume(model, filename):
     model.load_state_dict(torch.load(filename))
+
+def get_criterion_name(criterion):
+    loss_name = ""
+    for loss in criterion:
+        loss_name +=  "_"+type(loss).__name__
+
+    return loss_name
