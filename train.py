@@ -1,4 +1,6 @@
 __author__ = 'lstival'
+# Logger
+import comet_ml
 
 import os
 import torch
@@ -150,6 +152,8 @@ def train(dataroot, dataroot_val, criterions, batch_size, num_epochs, pretrained
 
             epoch_pbar.set_postfix(MSE=loss.item(), Val_loss = val_loss, Median=avg_vloss_train.item(),
                                     lr=optimizer.param_groups[0]['lr'])
+            
+            experiment.log_metrics({"loss": loss})
 
         scheduler.step()
 
@@ -226,7 +230,7 @@ criterions = [
 ]
 
 parser = ap.ArgumentParser()
-parser.add_argument("--criterion", type=list, default=0)
+parser.add_argument("--criterion", type=list, default=[0])
 parser.add_argument("--batch_size", type=int, default=3)
 parser.add_argument("--num_epochs", type=int, default=101)
 parser.add_argument("--model_deep", type=int, default=64)
@@ -253,6 +257,25 @@ pretrained = args.pretrained
 dataroot = args.dataroot
 dataroot_val = args.dataroot_val
 criterion_idx = int(args.criterion[0])
+
+comet_logger = comet_ml.Experiment(
+api_key="OQKd3iAY8RV0sgnY9VNde2D3G",
+project_name="loss_comparison",
+log_code=True)
+
+experiment = comet_logger
+
+comet_logger.log_parameters({
+    "batch_size": batch_size,
+    "img_size": image_size,
+    "used_dataset": "DAVIS",
+    "coment_logger": "many loss functions tested",
+    # "lr": 1e-4,
+    # "weight_decay": 1e-6,
+    "scheduler": "CosineAnnealingLR",
+    # "loss": "SSIMLoss + MSE",
+    "optimizer": "AdamW",
+    })
 
 print(criterion_idx)
 
